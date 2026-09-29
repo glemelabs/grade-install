@@ -14,7 +14,7 @@ param(
   [string]$Version = '1',
   [string]$Domain = '',
   [string]$Email = '',
-  [string]$Source = 'https://raw.githubusercontent.com/glemelabs/grade/main/infra/docker',
+  [string]$Source = 'https://raw.githubusercontent.com/glemelabs/grade-install/main',
   [string]$Registry = 'ghcr.io/glemelabs',
   [switch]$SkipPull,
   [switch]$NoDockerInstall,

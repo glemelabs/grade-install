@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Instalador do GRADE Self-Hosted (Linux).
 #
-#   curl -fsSL https://get.glemelabs.com/grade/install.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/glemelabs/grade-install/main/install.sh -o install.sh && sudo bash install.sh
 #   # ou, a partir do pacote baixado:  sudo ./install.sh
 #
 # Feito para a escola instalar sozinha: instala o Docker se faltar, escolhe
@@ -20,7 +20,7 @@ set -euo pipefail
 
 GRADE_DIR=${GRADE_DIR:-/opt/grade}
 GRADE_VERSION=${GRADE_VERSION:-1}
-GRADE_SOURCE=${GRADE_SOURCE:-https://raw.githubusercontent.com/glemelabs/grade/main/infra/docker}
+GRADE_SOURCE=${GRADE_SOURCE:-https://raw.githubusercontent.com/glemelabs/grade-install/main}
 GRADE_REGISTRY=${GRADE_REGISTRY:-ghcr.io/glemelabs}
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo .)
 
