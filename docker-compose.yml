@@ -1,0 +1,97 @@
+# GRADE Self-Hosted.
+#   docker compose --env-file .env up -d
+# O instalador (infra/install) gera o .env com senhas aleatórias.
+name: grade
+
+x-app-env: &app-env
+  DEPLOYMENT_MODE: selfhosted
+  DATABASE_URL: postgres://grade:${DB_PASSWORD:?defina DB_PASSWORD no .env}@postgres:5432/grade
+  APP_URL: ${APP_URL:-https://localhost}
+  STORAGE_DIR: /data/storage
+  LICENSE_ONLINE: ${LICENSE_ONLINE:-1}
+  SMTP_URL: ${SMTP_URL:-}
+  MAIL_FROM: ${MAIL_FROM:-GRADE <no-reply@localhost>}
+  BACKUP_RETENTION_DAYS: ${RETENTION_DAYS:-30}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: grade
+      POSTGRES_USER: grade
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U grade -d grade']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    image: ${GRADE_REGISTRY:-ghcr.io/glemelabs}/grade-web:${GRADE_VERSION:-1}
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      # Gerações, exportações e o backup diário rodam no serviço "worker".
+      GRADE_INLINE_WORKER: '0'
+    volumes:
+      - uploads:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    image: ${GRADE_REGISTRY:-ghcr.io/glemelabs}/grade-worker:${GRADE_VERSION:-1}
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-1}
+    volumes:
+      - uploads:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '${HTTP_PORT:-80}:80'
+      - '${HTTPS_PORT:-443}:443'
+    environment:
+      GRADE_DOMAIN: ${GRADE_DOMAIN:-localhost}
+      GRADE_TLS: ${GRADE_TLS:-internal}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on:
+      - web
+
+  backup:
+    image: ${GRADE_REGISTRY:-ghcr.io/glemelabs}/grade-backup:${GRADE_VERSION:-1}
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: grade
+      PGPASSWORD: ${DB_PASSWORD}
+      PGDATABASE: grade
+      CRON: ${BACKUP_CRON:-0 2 * * *}
+      RETENTION_DAYS: ${RETENTION_DAYS:-30}
+    volumes:
+      - backups:/backups
+      - uploads:/data:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata: {}
+  uploads: {}
+  backups: {}
+  caddydata: {}
+  caddyconfig: {}

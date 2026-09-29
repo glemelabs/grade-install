@@ -1,0 +1,15 @@
+# TLS automático: com domínio público o Caddy obtém certificado Let's Encrypt;
+# com nome da rede local ou IP usa certificado interno ("tls internal").
+# Defina GRADE_DOMAIN e GRADE_TLS no .env (o instalador faz isso).
+{$GRADE_DOMAIN:localhost} {
+	tls {$GRADE_TLS:internal}
+	encode zstd gzip
+	request_body {
+		max_size 60MB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	reverse_proxy web:3000
+}
